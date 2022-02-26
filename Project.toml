@@ -1,0 +1,11 @@
+name = "TypedMissings"
+uuid = "f4ac0b3e-2c29-40e4-89dd-14873424664b"
+authors = ["Milan Bouchet-Valat <nalimilan@club.fr>"]
+version = "0.1.0"
+
+[extras]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["LinearAlgebra", "Test"]
