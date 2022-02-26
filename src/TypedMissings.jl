@@ -19,7 +19,6 @@ end
 
 Base.ismissing(::TypedMissing) = true
 Base.coalesce(x::TypedMissing, y...) = coalesce(y...)
-Base.coalesce(x::TypedMissing) = x
 
 # Semi type piracy
 Base.nonmissingtype(::Type{T}) where {T >: TypedMissing} =
@@ -31,7 +30,8 @@ Base.promote_rule(T::Type{TypedMissing}, S::Type) = Union{S, TypedMissing}
 Base.promote_rule(T::Type{TypedMissing}, S::Type{Missing}) = TypedMissing
 Base.promote_rule(T::Type{Missing}, S::Type{TypedMissing}) = TypedMissing
 Base.promote_rule(T::Type{Union{Nothing, TypedMissing}}, S::Type) = Union{S, Nothing, TypedMissing}
-function Base.promote_rule(T::Type{>:Union{Nothing, TypedMissing}}, S::Type)
+
+function _promote_nothing(T::Type, S::Type)
     R = Base.nonnothingtype(T)
     R >: T && return Any
     T = R
@@ -41,30 +41,31 @@ function Base.promote_rule(T::Type{>:Union{Nothing, TypedMissing}}, S::Type)
     R = promote_type(T, S)
     return Union{R, Nothing, TypedMissing}
 end
-function Base.promote_rule(T::Type{>:TypedMissing}, S::Type)
+Base.promote_rule(T::Type{>:Union{Nothing, TypedMissing}}, S::Type) = _promote_nothing(T, S)
+Base.promote_rule(T::Type{>:Union{Nothing, Missing, TypedMissing}}, S::Type) =
+    _promote_nothing(T, S)
+Base.promote_rule(T::Type{>:Union{Nothing, Missing, TypedMissing}}, S::Type{>:TypedMissing}) =
+    _promote_nothing(T, S)
+Base.promote_rule(T::Type{>:Union{Nothing, Missing}}, S::Type{>:TypedMissing}) =
+    _promote_nothing(T, S)
+
+function _promote_missing(T::Type, S::Type)
     R = nonmissingtype(T)
     R >: T && return Any
     T = R
     R = promote_type(T, nonmissingtype(S))
     return Union{R, TypedMissing}
 end
-function Base.promote_rule(T::Type{>:Union{Missing, TypedMissing}}, S::Type)
-    R = nonmissingtype(T)
-    R >: T && return Any
-    T = R
-    R = promote_type(T, S)
-    return Union{R, TypedMissing}
-end
-function Base.promote_rule(T::Type{>:Union{Nothing, Missing, TypedMissing}}, S::Type)
-    R = Base.nonnothingtype(T)
-    R >: T && return Any
-    T = R
-    R = nonmissingtype(T)
-    R >: T && return Any
-    T = R
-    R = promote_type(T, S)
-    return Union{R, Nothing, TypedMissing}
-end
+Base.promote_rule(T::Type{>:TypedMissing}, S::Type) =
+    _promote_missing(T, S)
+Base.promote_rule(T::Type{>:Union{Missing, TypedMissing}}, S::Type) =
+    _promote_missing(T, S)
+Base.promote_rule(T::Type{>:Missing}, S::Type{>:TypedMissing}) =
+    _promote_missing(T, S)
+Base.promote_rule(T::Type{>:Union{Missing, TypedMissing}}, S::Type{>:TypedMissing}) =
+    _promote_missing(T, S)
+Base.promote_rule(T::Type{Missing}, S::Type{>:TypedMissing}) =
+    _promote_missing(T, S)
 
 Base.convert(::Type{T}, x::T) where {T>:TypedMissing} = x
 Base.convert(::Type{T}, x::T) where {T>:Union{TypedMissing, Nothing}} = x
@@ -276,5 +277,145 @@ function Base.float(A::AbstractArray{Union{T, TypedMissing}}) where {T}
     convert(AbstractArray{Union{U, TypedMissing}}, A)
 end
 Base.float(A::AbstractArray{TypedMissing}) = A
+
+
+## Redefinition of Base methods
+## (temporary type piracy to use `ismissing` instead of `=== missing`,
+## needed until Base is fixed to do the same)
+
+# This method is the only one which cannot be submitted to Base as-is,
+# an extensible mechanism would be needed instead (JuliaLang/julia#38241)
+Base._promote_typesubtract(@nospecialize(a)) =
+    Base.typesplit(a, Union{Nothing, Missing, TypedMissing})
+
+function Base.iterate(itr::Base.SkipMissing, state...)
+    y = iterate(itr.x, state...)
+    y === nothing && return nothing
+    item, state = y
+    while ismissing(item)
+        y = iterate(itr.x, state)
+        y === nothing && return nothing
+        item, state = y
+    end
+    item, state
+end
+
+Base.eachindex(itr::Base.SkipMissing) =
+    Iterators.filter(i -> !ismissing(@inbounds(itr.x[i])), eachindex(itr.x))
+Base.keys(itr::Base.SkipMissing) =
+    Iterators.filter(i -> !ismissing(@inbounds(itr.x[i])), keys(itr.x))
+Base.@propagate_inbounds function Base.getindex(itr::Base.SkipMissing, I...)
+    v = itr.x[I...]
+    ismissing(v) && throw(MissingException("the value at index $I is missing"))
+    v
+end
+
+Base.mapreduce(f, op, itr::Base.SkipMissing{<:AbstractArray}) =
+    Base._mapreduce(f, op, IndexStyle(itr.x),
+                    eltype(itr.x) >: Missing || eltype(itr.x) >: TypedMissing ? itr : itr.x)
+
+function Base._mapreduce(f, op, ::IndexLinear, itr::Base.SkipMissing{<:AbstractArray})
+    A = itr.x
+    # TODO: use TypedMissing() when applicable?
+    ai = missing
+    inds = LinearIndices(A)
+    i = first(inds)
+    ilast = last(inds)
+    for outer i in i:ilast
+        @inbounds ai = A[i]
+        !ismissing(ai) && break
+    end
+    ismissing(ai) && return Base.mapreduce_empty(f, op, eltype(itr))
+    a1::eltype(itr) = ai
+    i == typemax(typeof(i)) && return Base.mapreduce_first(f, op, a1)
+    i += 1
+    ai = missing
+    for outer i in i:ilast
+        @inbounds ai = A[i]
+        !ismissing(ai) && break
+    end
+    ismissing(ai) && return Base.mapreduce_first(f, op, a1)
+    # We know A contains at least two non-missing entries: the result cannot be nothing
+    something(Base.mapreduce_impl(f, op, itr, first(inds), last(inds)))
+end
+
+# Returns nothing when the input contains only missing values, and Some(x) otherwise
+@noinline function Base.mapreduce_impl(f, op, itr::Base.SkipMissing{<:AbstractArray},
+                                       ifirst::Integer, ilast::Integer, blksize::Int)
+    A = itr.x
+    if ifirst > ilast
+        return nothing
+    elseif ifirst == ilast
+        @inbounds a1 = A[ifirst]
+        if ismissing(ai)
+            return nothing
+        else
+            return Some(Base.mapreduce_first(f, op, a1))
+        end
+    elseif ilast - ifirst < blksize
+        # sequential portion
+        # TODO: use TypedMissing() when applicable?
+        ai = missing
+        i = ifirst
+        for outer i in i:ilast
+            @inbounds ai = A[i]
+            !ismissing(ai) && break
+        end
+        ismissing(ai) && return nothing
+        a1 = ai::eltype(itr)
+        i == typemax(typeof(i)) && return Some(Base.mapreduce_first(f, op, a1))
+        i += 1
+        ai = missing
+        for outer i in i:ilast
+            @inbounds ai = A[i]
+            !ismissing(ai) && break
+        end
+        ismissing(ai) && return Some(Base.mapreduce_first(f, op, a1))
+        a2 = ai::eltype(itr)
+        i == typemax(typeof(i)) && return Some(op(f(a1), f(a2)))
+        i += 1
+        v = op(f(a1), f(a2))
+        @simd for i = i:ilast
+            @inbounds ai = A[i]
+            if !ismissing(ai)
+                v = op(v, f(ai))
+            end
+        end
+        return Some(v)
+    else
+        # pairwise portion
+        imid = ifirst + (ilast - ifirst) >> 1
+        v1 = Base.mapreduce_impl(f, op, itr, ifirst, imid, blksize)
+        v2 = Base.mapreduce_impl(f, op, itr, imid+1, ilast, blksize)
+        if v1 === nothing && v2 === nothing
+            return nothing
+        elseif v1 === nothing
+            return v2
+        elseif v2 === nothing
+            return v1
+        else
+            return Some(op(something(v1), something(v2)))
+        end
+    end
+end
+
+function Base.filter(f, itr::Base.SkipMissing{<:AbstractArray})
+    y = similar(itr.x, eltype(itr), 0)
+    for xi in itr.x
+        if !ismissing(xi) && f(xi)
+            push!(y, xi)
+        end
+    end
+    y
+end
+
+import Base: @coalesce
+macro coalesce(args...)
+    expr = :(missing)
+    for arg in reverse(args)
+        expr = :((val = $arg); !ismissing(val) ? val : $expr)
+    end
+    return esc(:(let val; $expr; end))
+end
 
 end # module TypedMissings

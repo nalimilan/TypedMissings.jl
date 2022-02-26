@@ -1,4 +1,4 @@
-using TypedMissings, Test
+using TypedMissings, Test, OffsetArrays
 
 @testset "nonmissingtype" begin
     @test nonmissingtype(Union{Int, TypedMissing}) == Int
@@ -58,20 +58,20 @@ end
     @test promote_type(Union{Int, TypedMissing}, Union{Int, TypedMissing}) == Union{Int, TypedMissing}
     @test promote_type(Union{Float64, TypedMissing}, Union{String, TypedMissing}) == Any
     @test promote_type(Union{Float64, TypedMissing}, Union{Int, TypedMissing}) == Union{Float64, TypedMissing}
-    @test_broken promote_type(Union{Nothing, TypedMissing, Int}, Float64) == Any
+    @test promote_type(Union{Nothing, TypedMissing, Int}, Float64) == Union{Nothing, Float64, TypedMissing}
 
     @test promote_type(TypedMissing, Missing) == TypedMissing
     @test promote_type(Union{Float64, TypedMissing}, Missing) == Union{Float64, TypedMissing}
-    @test_broken promote_type(Union{Float64, Missing}, TypedMissing) == Union{Float64, TypedMissing}
-    @test_broken promote_type(Union{Float64, TypedMissing, Nothing}, Missing) == Union{Float64, Nothing, TypedMissing}
-    @test_broken promote_type(Union{Float64, Missing, Nothing}, TypedMissing) == Union{Float64, Nothing, TypedMissing}
+    @test promote_type(Union{Float64, Missing}, TypedMissing) == Union{Float64, TypedMissing}
+    @test promote_type(Union{Float64, TypedMissing, Nothing}, Missing) == Union{Float64, Nothing, TypedMissing}
+    @test promote_type(Union{Float64, Missing, Nothing}, TypedMissing) == Union{Float64, Nothing, TypedMissing}
 end
 
 @testset "promotion in various contexts" begin
-    @test_broken collect(v for v in (1, TypedMissing(:a))) isa Vector{Union{Int,TypedMissing}}
-    @test_broken map(identity, Any[1, TypedMissing(:a)]) isa Vector{Union{Int,TypedMissing}}
-    @test_broken broadcast(identity, Any[1, TypedMissing(:a)]) isa Vector{Union{Int,TypedMissing}}
-    @test_broken unique((1, TypedMissing(:a))) isa Vector{Union{Int,TypedMissing}}
+    @test collect(v for v in (1, TypedMissing(:a))) isa Vector{Union{Int,TypedMissing}}
+    @test map(identity, Any[1, TypedMissing(:a)]) isa Vector{Union{Int,TypedMissing}}
+    @test broadcast(identity, Any[1, TypedMissing(:a)]) isa Vector{Union{Int,TypedMissing}}
+    @test unique((1, TypedMissing(:a))) isa Vector{Union{Int,TypedMissing}}
 
     @test map(ismissing, Any[1, TypedMissing(:a)]) isa Vector{Bool}
     @test broadcast(ismissing, Any[1, TypedMissing(:a)]) isa BitVector
@@ -732,18 +732,18 @@ end
 @testset "skipmissing" begin
     x = skipmissing([1, 2, TypedMissing(:a), 4])
     @test eltype(x) === Int
-    @test_broken collect(x) == [1, 2, 4]
-    @test_broken collect(x) isa Vector{Int}
+    @test collect(x) == [1, 2, 4]
+    @test collect(x) isa Vector{Int}
 
     x = skipmissing([1  2; TypedMissing(:a) 4])
     @test eltype(x) === Int
-    @test_broken collect(x) == [1, 2, 4]
-    @test_broken collect(x) isa Vector{Int}
+    @test collect(x) == [1, 2, 4]
+    @test collect(x) isa Vector{Int}
 
     x = skipmissing([TypedMissing(:a)])
     @test eltype(x) === Union{}
-    @test_broken isempty(collect(x))
-    @test_broken collect(x) isa Vector{Union{}}
+    @test isempty(collect(x))
+    @test collect(x) isa Vector{Union{}}
 
     x = skipmissing(Union{Int, TypedMissing}[])
     @test eltype(x) === Int
@@ -753,45 +753,43 @@ end
     x = skipmissing([TypedMissing(:a), TypedMissing(:a), 1, 2, TypedMissing(:a),
                      4, TypedMissing(:a), TypedMissing(:a)])
     @test eltype(x) === Int
-    @test_broken collect(x) == [1, 2, 4]
-    @test_broken collect(x) isa Vector{Int}
+    @test collect(x) == [1, 2, 4]
+    @test collect(x) isa Vector{Int}
 
     x = skipmissing(v for v in [TypedMissing(:a), 1, TypedMissing(:a), 2, 4])
     @test eltype(x) === Any
-    @test_broken collect(x) == [1, 2, 4]
-    @test_broken collect(x) isa Vector{Int}
+    @test collect(x) == [1, 2, 4]
+    @test collect(x) isa Vector{Int}
 
     @testset "indexing" begin
         x = skipmissing([1, TypedMissing(:a), 2, TypedMissing(:a), TypedMissing(:a)])
-        @test_broken collect(eachindex(x)) == collect(keys(x)) == [1, 3]
+        @test collect(eachindex(x)) == collect(keys(x)) == [1, 3]
         @test x[1] === 1
         @test x[3] === 2
-        # TODO: uncomment
-        # @test_throws MissingException x[2]
-        # @test_throws BoundsError x[6]
-        @test_broken findfirst(==(2), x) == 3
-        @test_broken findall(==(2), x) == [3]
+        @test_throws MissingException x[2]
+        @test_throws BoundsError x[6]
+        @test findfirst(==(2), x) == 3
+        @test findall(==(2), x) == [3]
         @test argmin(x) == 1
         @test findmin(x) == (1, 1)
-        @test_broken argmax(x) == 3
-        @test_broken findmax(x) == (2, 3)
+        @test argmax(x) == 3
+        @test findmax(x) == (2, 3)
 
         x = skipmissing([TypedMissing(:a) 2; 1 TypedMissing(:a)])
-        @test_broken collect(eachindex(x)) == [2, 3]
-        @test_broken collect(keys(x)) == [CartesianIndex(2, 1), CartesianIndex(1, 2)]
+        @test collect(eachindex(x)) == [2, 3]
+        @test collect(keys(x)) == [CartesianIndex(2, 1), CartesianIndex(1, 2)]
         @test x[2] === x[2, 1] === 1
         @test x[3] === x[1, 2] === 2
-        # TODO: uncomment
-        # @test_throws MissingException x[1]
-        # @test_throws MissingException x[1, 1]
+        @test_throws MissingException x[1]
+        @test_throws MissingException x[1, 1]
         @test_throws BoundsError x[5]
         @test_throws BoundsError x[3, 1]
-        @test_broken findfirst(==(2), x) == CartesianIndex(1, 2)
-        @test_broken findall(==(2), x) == [CartesianIndex(1, 2)]
+        @test findfirst(==(2), x) == CartesianIndex(1, 2)
+        @test findall(==(2), x) == [CartesianIndex(1, 2)]
         @test argmin(x) == CartesianIndex(2, 1)
         @test findmin(x) == (1, CartesianIndex(2, 1))
-        @test_broken argmax(x) == CartesianIndex(1, 2)
-        @test_broken findmax(x) == (2, CartesianIndex(1, 2))
+        @test argmax(x) == CartesianIndex(1, 2)
+        @test findmax(x) == (2, CartesianIndex(1, 2))
 
         x = skipmissing([])
         @test isempty(collect(eachindex(x)))
@@ -806,18 +804,16 @@ end
         @test_throws ArgumentError("reducing over an empty collection is not allowed") findmax(x)
 
         x = skipmissing([TypedMissing(:a), TypedMissing(:a)])
-        @test_broken isempty(collect(eachindex(x)))
-        @test_broken isempty(collect(keys(x)))
+        @test isempty(collect(eachindex(x)))
+        @test isempty(collect(keys(x)))
         @test_throws BoundsError x[3]
-        # TODO: uncomment
-        # @test_throws BoundsError x[3, 1]
-        # @test_broken findfirst(==(2), x) === nothing
-        @test_broken isempty(findall(==(2), x))
-        # TODO: uncomment
-        # @test_throws ArgumentError("reducing over an empty collection is not allowed") argmin(x)
-        # @test_throws ArgumentError("reducing over an empty collection is not allowed") findmin(x)
-        # @test_throws ArgumentError("reducing over an empty collection is not allowed") argmax(x)
-        # @test_throws ArgumentError("reducing over an empty collection is not allowed") findmax(x)
+        @test_throws BoundsError x[3, 1]
+        @test findfirst(==(2), x) === nothing
+        @test isempty(findall(==(2), x))
+        @test_throws ArgumentError("reducing over an empty collection is not allowed") argmin(x)
+        @test_throws ArgumentError("reducing over an empty collection is not allowed") findmin(x)
+        @test_throws ArgumentError("reducing over an empty collection is not allowed") argmax(x)
+        @test_throws ArgumentError("reducing over an empty collection is not allowed") findmax(x)
     end
 
     @testset "mapreduce" begin
@@ -839,12 +835,12 @@ end
             B = Vector{Union{T,TypedMissing}}(A)
             replace!(x -> rand(Bool) ? x : TypedMissing(:a), B)
             if T === Int
-                @test_broken sum(collect(skipmissing(B))) ===
+                @test sum(collect(skipmissing(B))) ===
                     @inferred(sum(skipmissing(B))) ===
                     @inferred(reduce(+, skipmissing(B))) ===
                     @inferred(mapreduce(identity, +, skipmissing(B)))
             else
-                @test_broken sum(collect(skipmissing(B))) ≈ @inferred(sum(skipmissing(B))) ===
+                @test sum(collect(skipmissing(B))) ≈ @inferred(sum(skipmissing(B))) ===
                     @inferred(reduce(+, skipmissing(B))) ===
                     @inferred(mapreduce(identity, +, skipmissing(B)))
             end
@@ -854,10 +850,10 @@ end
             # Test block full of missing values
             B[1:length(B)÷2] .= TypedMissing(:a)
             if T === Int
-                @test_broken sum(collect(skipmissing(B))) == sum(skipmissing(B)) ==
+                @test sum(collect(skipmissing(B))) == sum(skipmissing(B)) ==
                     reduce(+, skipmissing(B)) == mapreduce(identity, +, skipmissing(B))
             else
-                @test_broken sum(collect(skipmissing(B))) ≈ sum(skipmissing(B)) ==
+                @test sum(collect(skipmissing(B))) ≈ sum(skipmissing(B)) ==
                     reduce(+, skipmissing(B)) == mapreduce(identity, +, skipmissing(B))
             end
 
@@ -865,64 +861,62 @@ end
         end
 
         # Patterns that exercize code paths for inputs with 1 or 2 non-missing values
-        @test_broken sum(skipmissing([1, TypedMissing(:a), TypedMissing(:a), TypedMissing(:a)])) === 1
-        @test_broken sum(skipmissing([TypedMissing(:a), TypedMissing(:a), TypedMissing(:a), 1])) === 1
-        @test_broken sum(skipmissing([1, TypedMissing(:a), TypedMissing(:a), TypedMissing(:a), 2])) === 3
-        @test_broken sum(skipmissing([TypedMissing(:a), TypedMissing(:a), TypedMissing(:a), 1, 2])) === 3
+        @test sum(skipmissing([1, TypedMissing(:a), TypedMissing(:a), TypedMissing(:a)])) === 1
+        @test sum(skipmissing([TypedMissing(:a), TypedMissing(:a), TypedMissing(:a), 1])) === 1
+        @test sum(skipmissing([1, TypedMissing(:a), TypedMissing(:a), TypedMissing(:a), 2])) === 3
+        @test sum(skipmissing([TypedMissing(:a), TypedMissing(:a), TypedMissing(:a), 1, 2])) === 3
 
         for n in 0:3
             itr = skipmissing(Vector{Union{Int,TypedMissing}}(fill(TypedMissing(:a), n)))
             if n == 0
                 @test sum(itr) == reduce(+, itr) == mapreduce(identity, +, itr) === 0
             else
-                @test_broken sum(itr) == reduce(+, itr) == mapreduce(identity, +, itr) === 0
+                @test sum(itr) == reduce(+, itr) == mapreduce(identity, +, itr) === 0
             end
-            # TODO: uncomment
-            # @test_throws ArgumentError("reducing over an empty collection is not allowed") reduce(x -> x/2, itr)
-            # @test_throws ArgumentError("reducing over an empty collection is not allowed") mapreduce(x -> x/2, +, itr)
+            @test_throws ArgumentError("reducing over an empty collection is not allowed") reduce(x -> x/2, itr)
+            @test_throws ArgumentError("reducing over an empty collection is not allowed") mapreduce(x -> x/2, +, itr)
         end
 
         # issue JuliaLang/julia#35504
         nt = NamedTuple{(:x, :y),Tuple{Union{TypedMissing, Int},Union{TypedMissing, Float64}}}(
             (TypedMissing(:a), TypedMissing(:a)))
-        @test_broken sum(skipmissing(nt)) === 0
+        @test sum(skipmissing(nt)) === 0
 
         # issues JuliaLang/julia#38627 and JuliaLang/julia#124
         @testset for len in [1, 2, 15, 16, 1024, 1025]
-            # TODO: uncomment
-            # v = repeat(Union{Int,TypedMissing}[1], len)
-            # oa = OffsetArray(v, typemax(Int)-length(v))
-            # sm = skipmissing(oa)
-            # @test_broken sum(sm) == len
+            v = repeat(Union{Int,TypedMissing}[1], len)
+            oa = OffsetArray(v, typemax(Int)-length(v))
+            sm = skipmissing(oa)
+            @test sum(sm) == len
 
-            # v = repeat(Union{Int,TypedMissing}[TypedMissing(:a)], len)
-            # oa = OffsetArray(v, typemax(Int)-length(v))
-            # sm = skipmissing(oa)
-            # @test_broken sum(sm) == 0
+            v = repeat(Union{Int,TypedMissing}[TypedMissing(:a)], len)
+            oa = OffsetArray(v, typemax(Int)-length(v))
+            sm = skipmissing(oa)
+            @test sum(sm) == 0
         end
     end
 
     @testset "filter" begin
         allmiss = Vector{Union{Int,TypedMissing}}(TypedMissing(:a), 10)
-        @test_broken isempty(filter(isodd, skipmissing(allmiss))::Vector{Int})
+        @test isempty(filter(isodd, skipmissing(allmiss))::Vector{Int})
         twod1 = [1.0f0 TypedMissing(:a); 3.0f0 TypedMissing(:a)]
-        @test_broken filter(x->x > 0, skipmissing(twod1))::Vector{Float32} == [1, 3]
+        @test filter(x->x > 0, skipmissing(twod1))::Vector{Float32} == [1, 3]
         twod2 = [1.0f0 2.0f0; 3.0f0 4.0f0]
         @test filter(x->x > 0, skipmissing(twod2)) == reshape(twod2, (4,))
     end
 end
 
 @testset "coalesce" begin
-    @test coalesce(TypedMissing(:a)) === TypedMissing(:a)
+    @test coalesce(TypedMissing(:a)) === missing
     @test coalesce(TypedMissing(:a), 1) === 1
     @test coalesce(1, TypedMissing(:a)) === 1
-    @test coalesce(TypedMissing(:a), TypedMissing(:b)) === TypedMissing(:b)
+    @test coalesce(TypedMissing(:a), TypedMissing(:b)) === missing
     @test coalesce(TypedMissing(:a), missing) === missing
-    @test coalesce(missing, TypedMissing(:a)) === TypedMissing(:a)
+    @test coalesce(missing, TypedMissing(:a)) === missing
     @test coalesce(TypedMissing(:a), 1, 2) === 1
     @test coalesce(1, TypedMissing(:a), 2) === 1
     @test coalesce(TypedMissing(:a), TypedMissing(:a), 2) === 2
-    @test coalesce(TypedMissing(:a), TypedMissing(:b), TypedMissing(:c)) === TypedMissing(:c)
+    @test coalesce(TypedMissing(:a), TypedMissing(:b), TypedMissing(:c)) === missing
     @test coalesce(TypedMissing(:a), TypedMissing(:b), missing) === missing
 
     @test coalesce(nothing, TypedMissing(:a)) === nothing
@@ -930,12 +924,23 @@ end
 end
 
 @testset "@coalesce" begin
-    @test @coalesce(TypedMissing(:a)) === TypedMissing(:a)
-    @test_broken @coalesce(TypedMissing(:a), 1) === 1
+    @test @coalesce(TypedMissing(:a)) === missing
+    @test @coalesce(TypedMissing(:a), 1) === 1
+    @test @coalesce(1, TypedMissing(:a)) === 1
+    @test @coalesce(TypedMissing(:a), TypedMissing(:b)) === missing
+    @test @coalesce(TypedMissing(:a), missing) === missing
+    @test @coalesce(missing, TypedMissing(:a)) === missing
+    @test @coalesce(TypedMissing(:a), 1, 2) === 1
+    @test @coalesce(1, TypedMissing(:a), 2) === 1
+    @test @coalesce(TypedMissing(:a), TypedMissing(:a), 2) === 2
+    @test @coalesce(TypedMissing(:a), TypedMissing(:b), TypedMissing(:c)) === missing
+    @test @coalesce(TypedMissing(:a), TypedMissing(:b), missing) === missing
+
+    @test @coalesce(nothing, TypedMissing(:a)) === nothing
+    @test @coalesce(TypedMissing(:a), nothing) === nothing
 
     @test @coalesce(1, error("failed")) === 1
-    # TODO: uncomment
-    # @test_throws ErrorException @coalesce(TypedMissing(:a), error("failed"))
+    @test_throws ErrorException @coalesce(TypedMissing(:a), error("failed"))
 end
 
 mutable struct Obj; x; end
