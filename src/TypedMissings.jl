@@ -1,9 +1,6 @@
 module TypedMissings
 
 export TypedMissing
-
-export TypedMissing
-
 struct TypedMissing
     kind::Symbol
 end
