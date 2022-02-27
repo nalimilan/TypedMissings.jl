@@ -2,11 +2,9 @@ module TypedMissings
 
 export TypedMissing
 
-abstract type AbstractMissing end
-
 export TypedMissing
 
-struct TypedMissing <: AbstractMissing
+struct TypedMissing
     kind::Symbol
 end
 TypedMissing() = TypedMissing(Symbol(""))
