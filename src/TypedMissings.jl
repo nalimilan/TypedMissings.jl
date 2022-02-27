@@ -1,14 +1,153 @@
 module TypedMissings
 
-export TypedMissing
-struct TypedMissing
-    kind::Symbol
+export TypedMissing, MissingKind, MissingKinds
+module MissingKinds
+    export MissingKind
+
+    @enum MissingKind::UInt8 begin
+        NI=0    # No information
+        INV=1   # Invalid
+        OTH=2   # Other
+        NINF=3  # Negative infinity
+        PINF=4  # Positive infinity
+        UNC=5   # Unencoded
+        DER=6   # Derived
+        UNK=7   # Unknown
+        ASKU=8  # Asked but unknown
+        NAV=9   # Temporarily not available
+        NAVU=10 # Not available
+        NASK=11 # Not asked
+        QS=12   # Sufficient quantity
+        TRC=13  # Trace
+        MSK=14  # Masked
+        NA=15   # Not applicable
+
+        a=101
+        b=102
+        c=103
+        d=104
+        e=105
+        f=106
+        g=107
+        h=108
+        i=109
+        j=110
+        k=111
+        l=112
+        m=113
+        n=114
+        o=115
+        p=116
+        q=117
+        r=118
+        s=119
+        t=120
+        u=121
+        v=122
+        w=123
+        x=124
+        y=125
+        z=126
+    end
 end
-TypedMissing() = TypedMissing(Symbol(""))
+using .MissingKinds
+
+"""
+    TypedMissing(kind::MissingKind=MissingKinds.NI)
+
+A type similar to `Missing` that allows representing multiple kinds
+of missing values. The default kind is `MissingKinds.NI` ("No information"),
+which is equivalent to `missing`.
+Values of type `TypedMissing` behave identically to `missing`, except that
+`isequal(TypedMissing(kind), missing)` is `true` if and only if
+`kind == MissingKinds.NI`.
+
+`TypedMissing` values propagate their `kind` across operations
+which involve only missing values of the same `kind` or non-missing
+values. Operations mixing `TypedMissing` values of different `kind`s
+fall back to the `MissingKinds.NI` kind.
+
+If provided, `kind` must be an instance of the `MissingKind` enum.
+Supported `kind`s are `NI`, lowercase letters from a to z, and "null flavour"
+values [defined by FHIR HL7 v3](https://www.hl7.org/fhir/v3/NullFlavor/cs.html)/
+ISO 21090:
+- NI: No information
+- INV: Invalid
+- OTH: Other
+- NINF: Negative infinity
+- PINF: Positive infinity
+- UNC: Unencoded
+- DER: Derived
+- UNK: Unknown
+- ASKU: Asked but unknown
+- NAV: Temporarily not available
+- NAVU: Not available
+- QS: Sufficient quantity
+- NASK:Not asked
+- TRC: Trace
+- MSK: Masked
+- NA: Not applicable
+
+# Examples
+```jldoctest
+julia> TypedMissing()
+TypedMissing()
+
+julia> TypedMissing(MissingKinds.NI)
+TypedMissing()
+
+julia> TypedMissing() + 1
+TypedMissing()
+
+julia> TypedMissing(MissingKinds.a) + 1
+TypedMissing(MissingKinds.a)
+
+julia> TypedMissing(MissingKinds.NASK) + 1
+TypedMissing(MissingKinds.NASK)
+
+julia> TypedMissing(MissingKinds.NASK) + TypedMissing(MissingKinds.INV)
+TypedMissing()
+
+julia> TypedMissing(MissingKinds.NASK) + missing
+TypedMissing()
+
+julia> TypedMissing(MissingKinds.NASK) + 1
+TypedMissing(MissingKinds.NASK)
+
+julia> isequal(TypedMissing(MissingKinds.NASK), TypedMissing(MissingKinds.NASK))
+true
+
+julia> isequal(TypedMissing(MissingKinds.NASK), TypedMissing(MissingKinds.INV))
+false
+
+julia> isequal(TypedMissing(MissingKinds.NASK), missing)
+false
+
+julia> isequal(TypedMissing(MissingKinds.NI), missing)
+true
+```
+"""
+struct TypedMissing
+    kind::MissingKind
+end
+TypedMissing() = TypedMissing(MissingKinds.NI)
 
 function Base.show(io::IO, x::TypedMissing)
-    print(io, "TypedMissing(")
-    x.kind !== Symbol("") && show(io, x.kind)
+    show(io, TypedMissing)
+    print(io, '(')
+    if x.kind != MissingKinds.NI
+        print(io, "MissingKinds.", x.kind)
+    end
+    print(io, ')')
+end
+
+function Base.show(io::IO, ::MIME"text/plain", x::TypedMissing)
+    show(io, TypedMissing)
+    print(io, '(')
+    if x.kind != MissingKinds.NI
+        get(io, :compact, false) || print(io, "MissingKinds.")
+        print(io, x.kind)
+    end
     print(io, ')')
 end
 
@@ -103,8 +242,8 @@ Base.:(==)(x::TypedMissing, ::Missing) = TypedMissing()
 Base.:(==)(::Missing, y::TypedMissing) = TypedMissing()
 
 Base.isequal(x::TypedMissing, y::TypedMissing) = x === y
-Base.isequal(x::TypedMissing, y::Missing) = x.kind === Symbol("")
-Base.isequal(x::Missing, y::TypedMissing) = y.kind === Symbol("")
+Base.isequal(x::TypedMissing, y::Missing) = x.kind == MissingKinds.NI
+Base.isequal(x::Missing, y::TypedMissing) = y.kind == MissingKinds.NI
 Base.isequal(x::TypedMissing, y::Any) = false
 Base.isequal(x::Any, y::TypedMissing) = false
 
@@ -118,7 +257,7 @@ Base.:(<)(::Missing, y::TypedMissing) = TypedMissing()
 Base.isless(x::TypedMissing, y::TypedMissing) =
     isless(x.kind, y.kind)
 Base.isless(x::TypedMissing, y::Missing) = false
-Base.isless(x::Missing, y::TypedMissing) = y.kind !== Symbol("")
+Base.isless(x::Missing, y::TypedMissing) = y.kind != MissingKinds.NI
 Base.isless(x::TypedMissing, ::Any) = false
 Base.isless(::Any, y::TypedMissing) = true
 
