@@ -3,6 +3,9 @@ uuid = "f4ac0b3e-2c29-40e4-89dd-14873424664b"
 authors = ["Milan Bouchet-Valat <nalimilan@club.fr>"]
 version = "0.1.0"
 
+[compat]
+julia = "1.6"
+
 [extras]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
