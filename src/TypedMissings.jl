@@ -543,13 +543,15 @@ function Base.filter(f, itr::Base.SkipMissing{<:AbstractArray})
     y
 end
 
-import Base: @coalesce
-macro coalesce(args...)
-    expr = :(missing)
-    for arg in reverse(args)
-        expr = :((val = $arg); !ismissing(val) ? val : $expr)
+if VERSION >= v"1.7.0"
+    import Base: @coalesce
+    macro coalesce(args...)
+        expr = :(missing)
+        for arg in reverse(args)
+            expr = :((val = $arg); !ismissing(val) ? val : $expr)
+        end
+        return esc(:(let val; $expr; end))
     end
-    return esc(:(let val; $expr; end))
 end
 
 end # module TypedMissings

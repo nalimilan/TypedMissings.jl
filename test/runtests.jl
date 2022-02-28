@@ -152,8 +152,13 @@ end
     arithmetic_operators = [+, -, *, /, ^, Base.div, Base.mod, Base.fld, Base.rem]
 
     # All unary operators return missing of the same kind when evaluating missing
-    for f in [!, ~, +, -, *, &, |, xor, nand, nor]
+    for f in [!, ~, +, -, *, &, |, xor]
         @test f(missing_a) === missing_a
+    end
+    if VERSION >= v"1.7.0"
+        for f in [nand, nor]
+            @test f(missing_a) === missing_a
+        end
     end
 
     # All arithmetic operators return missing when operating on two missing's
@@ -204,6 +209,9 @@ end
 
 @testset "bit operators" begin
     bit_operators = [&, |, ⊻]
+    if VERSION >= v"1.7.0"
+        push!(bit_operators, ⊻)
+    end
 
     # All bit operators return missing when operating on two missing's
     for f in bit_operators
@@ -226,22 +234,24 @@ end
     @test (xor(true, missing_a)) === missing_a
     @test (xor(missing_a, false)) === missing_a
     @test (xor(false, missing_a)) === missing_a
-    @test (nand(missing_a, true)) === missing_a
-    @test (nand(true, missing_a)) === missing_a
-    @test nand(missing_a, false)
-    @test nand(false, missing_a)
-    @test (⊼(missing_a, true)) === missing_a
-    @test (⊼(true, missing_a)) === missing_a
-    @test ⊼(missing_a, false)
-    @test ⊼(false, missing_a)
-    @test !nor(missing_a, true)
-    @test !nor(true, missing_a)
-    @test (nor(missing_a, false)) === missing_a
-    @test (nor(false, missing_a)) === missing_a
-    @test !⊽(missing_a, true)
-    @test !⊽(true, missing_a)
-    @test (⊽(missing_a, false)) === missing_a
-    @test (⊽(false, missing_a)) === missing_a
+    if VERSION >= v"1.7.0"
+        @test (nand(missing_a, true)) === missing_a
+        @test (nand(true, missing_a)) === missing_a
+        @test nand(missing_a, false)
+        @test nand(false, missing_a)
+        @test (⊼(missing_a, true)) === missing_a
+        @test (⊼(true, missing_a)) === missing_a
+        @test ⊼(missing_a, false)
+        @test ⊼(false, missing_a)
+        @test !nor(missing_a, true)
+        @test !nor(true, missing_a)
+        @test (nor(missing_a, false)) === missing_a
+        @test (nor(false, missing_a)) === missing_a
+        @test !⊽(missing_a, true)
+        @test !⊽(true, missing_a)
+        @test (⊽(missing_a, false)) === missing_a
+        @test (⊽(false, missing_a)) === missing_a
+    end
 
     @test (missing_a & 1) === missing_a
     @test (1 & missing_a) === missing_a
@@ -249,22 +259,26 @@ end
     @test (1 | missing_a) === missing_a
     @test (xor(missing_a, 1)) === missing_a
     @test (xor(1, missing_a)) === missing_a
-    @test (nand(missing_a, 1)) === missing_a
-    @test (nand(1, missing_a)) === missing_a
-    @test (⊼(missing_a, 1)) === missing_a
-    @test (⊼(1, missing_a)) === missing_a
-    @test (nor(missing_a, 1)) === missing_a
-    @test (nor(1, missing_a)) === missing_a
-    @test (⊽(missing_a, 1)) === missing_a
-    @test (⊽(1, missing_a)) === missing_a
+    if VERSION >= v"1.7.0"
+        @test (nand(missing_a, 1)) === missing_a
+        @test (nand(1, missing_a)) === missing_a
+        @test (⊼(missing_a, 1)) === missing_a
+        @test (⊼(1, missing_a)) === missing_a
+        @test (nor(missing_a, 1)) === missing_a
+        @test (nor(1, missing_a)) === missing_a
+        @test (⊽(missing_a, 1)) === missing_a
+        @test (⊽(1, missing_a)) === missing_a
+    end
 
     @test (missing_a & missing_b) === TypedMissing()
     @test (missing_a | missing_b) === TypedMissing()
     @test (xor(missing_a, missing_b)) === TypedMissing()
-    @test (nand(missing_a, missing_b)) === TypedMissing()
-    @test (⊼(missing_a, missing_b)) === TypedMissing()
-    @test (nor(missing_a, missing_b)) === TypedMissing()
-    @test (⊽(missing_a, missing_b)) === TypedMissing()
+    if VERSION >= v"1.7.0"
+        @test (nand(missing_a, missing_b)) === TypedMissing()
+        @test (⊼(missing_a, missing_b)) === TypedMissing()
+        @test (nor(missing_a, missing_b)) === TypedMissing()
+        @test (⊽(missing_a, missing_b)) === TypedMissing()
+    end
 
     @test (missing_a & missing) === TypedMissing()
     @test (missing & missing_a) === TypedMissing()
@@ -272,14 +286,16 @@ end
     @test (missing | missing_a) === TypedMissing()
     @test (xor(missing_a, missing)) === TypedMissing()
     @test (xor(missing, missing_a)) === TypedMissing()
-    @test (nand(missing_a, missing)) === TypedMissing()
-    @test (nand(missing, missing_a)) === TypedMissing()
-    @test (⊼(missing_a, missing)) === TypedMissing()
-    @test (⊼(missing, missing_a)) === TypedMissing()
-    @test (nor(missing_a, missing)) === TypedMissing()
-    @test (nor(missing, missing_a)) === TypedMissing()
-    @test (⊽(missing_a, missing)) === TypedMissing()
-    @test (⊽(missing, missing_a)) === TypedMissing()
+    if VERSION >= v"1.7.0"
+        @test (nand(missing_a, missing)) === TypedMissing()
+        @test (nand(missing, missing_a)) === TypedMissing()
+        @test (⊼(missing_a, missing)) === TypedMissing()
+        @test (⊼(missing, missing_a)) === TypedMissing()
+        @test (nor(missing_a, missing)) === TypedMissing()
+        @test (nor(missing, missing_a)) === TypedMissing()
+        @test (⊽(missing_a, missing)) === TypedMissing()
+        @test (⊽(missing, missing_a)) === TypedMissing()
+    end
 end
 
 @testset "* string/char concatenation" begin
@@ -397,18 +413,33 @@ end
     @test sprint(show, [1 TypedMissing()]) ==
         "$(Union{Int, TypedMissing})[1 TypedMissing()]"
 
-    b = IOBuffer()
-    display(TextDisplay(b), [missing_a])
-    @test String(take!(b)) == "1-element Vector{TypedMissing}:\n TypedMissing(MissingKinds.a)"
-    b = IOBuffer()
-    display(TextDisplay(b), [1 missing_a])
-    @test String(take!(b)) == "1×2 Matrix{Union{Int64, TypedMissing}}:\n 1  TypedMissing(a)"
-    b = IOBuffer()
-    display(TextDisplay(b), [TypedMissing()])
-    @test String(take!(b)) == "1-element Vector{TypedMissing}:\n TypedMissing()"
-    b = IOBuffer()
-    display(TextDisplay(b), [1 TypedMissing()])
-    @test String(take!(b)) == "1×2 Matrix{Union{Int64, TypedMissing}}:\n 1  TypedMissing()"
+    if VERSION >= v"1.8.0-DEV"
+        b = IOBuffer()
+        display(TextDisplay(b), [missing_a])
+        @test String(take!(b)) == "1-element Vector{TypedMissing}:\n TypedMissing(MissingKinds.a)\n"
+        b = IOBuffer()
+        display(TextDisplay(b), [1 missing_a])
+        @test String(take!(b)) == "1×2 Matrix{Union{$Int, TypedMissing}}:\n 1  TypedMissing(a)\n"
+        b = IOBuffer()
+        display(TextDisplay(b), [TypedMissing()])
+        @test String(take!(b)) == "1-element Vector{TypedMissing}:\n TypedMissing()\n"
+        b = IOBuffer()
+        display(TextDisplay(b), [1 TypedMissing()])
+        @test String(take!(b)) == "1×2 Matrix{Union{$Int, TypedMissing}}:\n 1  TypedMissing()\n"
+    else
+        b = IOBuffer()
+        display(TextDisplay(b), [missing_a])
+        @test String(take!(b)) == "1-element Vector{TypedMissing}:\n TypedMissing(MissingKinds.a)"
+        b = IOBuffer()
+        display(TextDisplay(b), [1 missing_a])
+        @test String(take!(b)) == "1×2 Matrix{Union{$Int, TypedMissing}}:\n 1  TypedMissing(a)"
+        b = IOBuffer()
+        display(TextDisplay(b), [TypedMissing()])
+        @test String(take!(b)) == "1-element Vector{TypedMissing}:\n TypedMissing()"
+        b = IOBuffer()
+        display(TextDisplay(b), [1 TypedMissing()])
+        @test String(take!(b)) == "1×2 Matrix{Union{$Int, TypedMissing}}:\n 1  TypedMissing()"
+    end
 end
 
 @testset "arrays with missing values" begin
@@ -813,10 +844,17 @@ end
         @test_throws BoundsError x[3, 1]
         @test findfirst(==(2), x) === nothing
         @test isempty(findall(==(2), x))
-        @test_throws ArgumentError("reducing over an empty collection is not allowed") argmin(x)
-        @test_throws ArgumentError("reducing over an empty collection is not allowed") findmin(x)
-        @test_throws ArgumentError("reducing over an empty collection is not allowed") argmax(x)
-        @test_throws ArgumentError("reducing over an empty collection is not allowed") findmax(x)
+        if VERSION >= v"1.8.0-DEV"
+            @test_throws MethodError argmin(x)
+            @test_throws MethodError findmin(x)
+            @test_throws MethodError argmax(x)
+            @test_throws MethodError findmax(x)
+        else
+            @test_throws ArgumentError argmin(x)
+            @test_throws ArgumentError findmin(x)
+            @test_throws ArgumentError argmax(x)
+            @test_throws ArgumentError findmax(x)
+        end
 
         x = skipmissing([missing_a, missing_a])
         @test isempty(collect(eachindex(x)))
@@ -825,10 +863,17 @@ end
         @test_throws BoundsError x[3, 1]
         @test findfirst(==(2), x) === nothing
         @test isempty(findall(==(2), x))
-        @test_throws ArgumentError("reducing over an empty collection is not allowed") argmin(x)
-        @test_throws ArgumentError("reducing over an empty collection is not allowed") findmin(x)
-        @test_throws ArgumentError("reducing over an empty collection is not allowed") argmax(x)
-        @test_throws ArgumentError("reducing over an empty collection is not allowed") findmax(x)
+        if VERSION >= v"1.8.0-DEV"
+            @test_throws MethodError argmin(x)
+            @test_throws MethodError findmin(x)
+            @test_throws MethodError argmax(x)
+            @test_throws MethodError findmax(x)
+        else
+            @test_throws ArgumentError argmin(x)
+            @test_throws ArgumentError findmin(x)
+            @test_throws ArgumentError argmax(x)
+            @test_throws ArgumentError findmax(x)
+        end
     end
 
     @testset "mapreduce" begin
@@ -849,18 +894,20 @@ end
 
             B = Vector{Union{T,TypedMissing}}(A)
             replace!(x -> rand(Bool) ? x : missing_a, B)
-            if T === Int
-                @test sum(collect(skipmissing(B))) ===
-                    @inferred(sum(skipmissing(B))) ===
-                    @inferred(reduce(+, skipmissing(B))) ===
-                    @inferred(mapreduce(identity, +, skipmissing(B)))
-            else
-                @test sum(collect(skipmissing(B))) ≈ @inferred(sum(skipmissing(B))) ===
-                    @inferred(reduce(+, skipmissing(B))) ===
-                    @inferred(mapreduce(identity, +, skipmissing(B)))
+            if VERSION >= v"1.7.0"
+                if T === Int
+                    @test sum(collect(skipmissing(B))) ===
+                        @inferred(sum(skipmissing(B))) ===
+                        @inferred(reduce(+, skipmissing(B))) ===
+                        @inferred(mapreduce(identity, +, skipmissing(B)))
+                else
+                    @test sum(collect(skipmissing(B))) ≈ @inferred(sum(skipmissing(B))) ===
+                        @inferred(reduce(+, skipmissing(B))) ===
+                        @inferred(mapreduce(identity, +, skipmissing(B)))
+                end
+                @test mapreduce(cos, *, collect(skipmissing(A))) ≈
+                    @inferred(mapreduce(cos, *, skipmissing(A)))
             end
-            @test mapreduce(cos, *, collect(skipmissing(A))) ≈
-                @inferred(mapreduce(cos, *, skipmissing(A)))
 
             # Test block full of missing values
             B[1:length(B)÷2] .= missing_a
@@ -888,8 +935,13 @@ end
             else
                 @test sum(itr) == reduce(+, itr) == mapreduce(identity, +, itr) === 0
             end
-            @test_throws ArgumentError("reducing over an empty collection is not allowed") reduce(x -> x/2, itr)
-            @test_throws ArgumentError("reducing over an empty collection is not allowed") mapreduce(x -> x/2, +, itr)
+            if VERSION >= v"1.8.0-DEV"
+                @test_throws MethodError reduce(x -> x/2, itr)
+                @test_throws MethodError mapreduce(x -> x/2, +, itr)
+            else
+                @test_throws ArgumentError reduce(x -> x/2, itr)
+                @test_throws ArgumentError mapreduce(x -> x/2, +, itr)
+            end
         end
 
         # issue JuliaLang/julia#35504
@@ -938,24 +990,26 @@ end
     @test coalesce(missing_a, nothing) === nothing
 end
 
-@testset "@coalesce" begin
-    @test @coalesce(missing_a) === missing
-    @test @coalesce(missing_a, 1) === 1
-    @test @coalesce(1, missing_a) === 1
-    @test @coalesce(missing_a, missing_b) === missing
-    @test @coalesce(missing_a, missing) === missing
-    @test @coalesce(missing, missing_a) === missing
-    @test @coalesce(missing_a, 1, 2) === 1
-    @test @coalesce(1, missing_a, 2) === 1
-    @test @coalesce(missing_a, missing_a, 2) === 2
-    @test @coalesce(missing_a, missing_b, missing_c) === missing
-    @test @coalesce(missing_a, missing_b, missing) === missing
+@static if VERSION >= v"1.7.0"
+    @testset "@coalesce" begin
+        @test @coalesce(missing_a) === missing
+        @test @coalesce(missing_a, 1) === 1
+        @test @coalesce(1, missing_a) === 1
+        @test @coalesce(missing_a, missing_b) === missing
+        @test @coalesce(missing_a, missing) === missing
+        @test @coalesce(missing, missing_a) === missing
+        @test @coalesce(missing_a, 1, 2) === 1
+        @test @coalesce(1, missing_a, 2) === 1
+        @test @coalesce(missing_a, missing_a, 2) === 2
+        @test @coalesce(missing_a, missing_b, missing_c) === missing
+        @test @coalesce(missing_a, missing_b, missing) === missing
 
-    @test @coalesce(nothing, missing_a) === nothing
-    @test @coalesce(missing_a, nothing) === nothing
+        @test @coalesce(nothing, missing_a) === nothing
+        @test @coalesce(missing_a, nothing) === nothing
 
-    @test @coalesce(1, error("failed")) === 1
-    @test_throws ErrorException @coalesce(missing_a, error("failed"))
+        @test @coalesce(1, error("failed")) === 1
+        @test_throws ErrorException @coalesce(missing_a, error("failed"))
+    end
 end
 
 mutable struct Obj; x; end
