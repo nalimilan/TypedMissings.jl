@@ -5,6 +5,10 @@
 
 *Support for different kinds of missing values in Julia*
 
+Note : This package is currently experimental. It relies on overwriting
+some fundamental Julia Base methods until they are changed to use
+`ismissing(x)` instead of hardcoding `x === missing`.
+
 TypedMissings.jl provides the `TypedMissing` type which is
 similar to `Missing` but allows representing multiple kinds
 of missing values.
