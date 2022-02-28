@@ -1,7 +1,7 @@
 # TypedMissings.jl
 
 [![CI](https://github.com/nalimilan/TypedMissings.jl/workflows/CI/badge.svg)](https://github.com/nalimilan/TypedMissings.jl/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/nalimilan/TypedMissings.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/nalimilan/TypedMissings.jl)
+[![codecov](https://codecov.io/gh/nalimilan/TypedMissings.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/nalimilan/TypedMissings.jl)
 
 *Support for different kinds of missing values in Julia*
 
