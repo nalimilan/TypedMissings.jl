@@ -24,8 +24,7 @@ fall back to the `MissingKinds.NI` kind.
 
 If provided, `kind` must be an instance of the `MissingKind` enum.
 Supported `kind`s are `NI`, lowercase letters from a to z, and "null flavour"
-values [defined by FHIR HL7 v3](https://www.hl7.org/fhir/v3/NullFlavor/cs.html)/
-ISO 21090:
+values [defined by FHIR HL7 v3](https://terminology.hl7.org/5.3.0/ValueSet-v3-NullFlavor.html)/ISO 21090:
 - NI: No information
 - INV: Invalid
 - OTH: Other
@@ -38,7 +37,7 @@ ISO 21090:
 - NAV: Temporarily not available
 - NAVU: Not available
 - QS: Sufficient quantity
-- NASK:Not asked
+- NASK: Not asked
 - TRC: Trace
 - MSK: Masked
 - NA: Not applicable
