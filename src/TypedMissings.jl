@@ -83,7 +83,7 @@ ISO 21090:
 - NAV: Temporarily not available
 - NAVU: Not available
 - QS: Sufficient quantity
-- NASK:Not asked
+- NASK: Not asked
 - TRC: Trace
 - MSK: Masked
 - NA: Not applicable
